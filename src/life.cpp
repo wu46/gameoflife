@@ -14,6 +14,7 @@
 #include "vector.h"
 #include "pointll.h"
 #include "set.h"
+#include "gameoflife.h"
 using namespace std;
 
 // function declarations
@@ -23,13 +24,15 @@ void updateDeadCells(Set<PointLL> deadQ, Set<PointLL> &world, Set<PointLL> &next
 void getNeighbours(PointLL pt, Set<PointLL> &s);
 
 int main() {
-  Set<PointLL> world;
-  Set<PointLL> nextworld;
+  GameOfLife game("fishcoord.txt");
 
-  initializeWorld(world,"glider-gun_coord.txt");
+  //Set<PointLL> world;
+  //Set<PointLL> nextworld;
+
+  //initializeWorld(world,"glider-gun_coord.txt");
+
 
   LifeGUI gui;
-
   while (true) {
     string s = getLine("[a]nimate, [t]ick, [q]uit? ");
     int it = 0;
@@ -49,16 +52,20 @@ int main() {
     }
     // main loop
     while (it < nIterations){
-      updateWorld(world);
+      //updateWorld(world);
+      game.tick();
+      Set<PointLL> world = game.getWorld();
       gui.drawBoard(world);
+      //gui.drawBoard(game.getWorld());
+
       pause(100);
       it++;
     }
   }
+
 }
 
 void initializeWorld(Set<PointLL>& world, string filename){
-
   ifstream infile;
   infile.open(filename.c_str());
 
