@@ -1,10 +1,10 @@
-
 #include <cctype>
 #include <cmath>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <climits>
 #include "console.h"
 #include "filelib.h"
 #include "grid.h"
@@ -12,32 +12,30 @@
 #include "simpio.h"
 #include "lifegui.h"
 #include "vector.h"
+#include "pointll.h"
+#include "set.h"
 using namespace std;
 
 // function declarations
-void initializeWorld(Grid<int>& world, Grid<int>& nextworld, string filename);
-void updateWorld(Grid<int>& world, Grid<int>& nextworld);
-void getNeighbours(int i, int j, Vector<int> &xcoord, Vector<int> &ycoord, Grid<int> &world);
-void displayWorld(Grid<int> &world);
-void testGUI();
+void initializeWorld(Set<PointLL>& world,string filename);
+void updateWorld(Set<PointLL>& world);
+void updateDeadCells(Set<PointLL> deadQ, Set<PointLL> &world, Set<PointLL> &nextworld);
+void getNeighbours(PointLL pt, Set<PointLL> &s);
 
 int main() {
-  Grid<int> world;
-  Grid<int> nextworld;
-  initializeWorld(world, nextworld, "glider-gun.txt");
+  Set<PointLL> world;
+  Set<PointLL> nextworld;
+
+  initializeWorld(world,"glider-gun_coord.txt");
 
   LifeGUI gui;
 
-  // TODO: remove
-  // test GUI
-  // app will exit after this part
-
-  //
   while (true) {
     string s = getLine("[a]nimate, [t]ick, [q]uit? ");
     int it = 0;
     int nIterations;
 
+    // choose mode
     switch (s[0]) {
       case 'a':
         nIterations = stringToInteger(getLine("How many frames? "));
@@ -49,137 +47,165 @@ int main() {
         cout << "Have a nice Life!" << endl;
         return 0;
     }
+    // main loop
     while (it < nIterations){
-        clearConsole();
-        updateWorld(world,nextworld);
-        gui.drawBoard(world);
-        //displayWorld(world);
-        pause(100);
-        it++;
+      updateWorld(world);
+      gui.drawBoard(world);
+      pause(100);
+      it++;
     }
   }
 }
 
-void initializeWorld(Grid<int>& world, Grid<int>& nextworld, string filename){
+void initializeWorld(Set<PointLL>& world, string filename){
 
   ifstream infile;
   infile.open(filename.c_str());
+
+  cout << filename.c_str() << endl;
+
   string nextline;
 
-
-  // get grid size
-  getline(infile,nextline);
-  int num_rows = stringToInteger(nextline);
-
-  getline(infile,nextline);
-  int num_cols = stringToInteger(nextline);
-
-
-  int line_count = 0;
-  world.resize(num_rows, num_cols);
-  nextworld.resize(num_rows, num_cols);
-
-  // populate grid
-  while (line_count < num_rows){
-    getline(infile, nextline);
-    for (int i=0; i<num_cols; i++){
-      if (tolower(nextline[i]) == 'x'){
-        world[line_count][i] = 1;
-      }
-    }
-    line_count++;
+  // Input file has the form:
+  // (x1,y1)
+  // (x2,y2)
+  // ...
+  cout << "opening file: " << filename << endl;
+  if (infile.is_open()) {
+    cout << "file is OPEN!" << endl;
+  } else {
+    cout << "file is NOT open :(" << endl;
+  }
+  while (getline(infile,nextline)) {
+    nextline = stringReplace(nextline, "(", "");
+    nextline = stringReplace(nextline, ")", "");
+    vector<string> v = stringSplit(nextline, ",");
+    PointLL pt(stringToLongLong(v[0]),
+        stringToLongLong(v[1]));
+    world.add(pt);
   }
   return;
 }
 
-void updateWorld(Grid<int> &world, Grid<int> &nextworld) {
-  for (int i = 0; i<world.nRows; i++) {
-    for (int j=0; j<world.nCols; j++) {
-      Vector<int> xcoords;
-      Vector<int> ycoords;
-      getNeighbours(i,j,xcoords,ycoords,world);
+void updateDeadCells(Set<PointLL> deadNeighbours, Set<PointLL> &world, Set<PointLL> &nextworld)
+{
+  for (Set<PointLL>::iterator it=deadNeighbours.begin();
+       it!=deadNeighbours.end(); it++)
+    {
+      Set<PointLL> neighbours;
+      getNeighbours(*it, neighbours);
 
       //count the neighbours
-      int nDeadNeighbors = 0;
-      int nAliveNeighbors = 0;
-      for (int i=0; i<xcoords.size(); i++) {
-        if (world[xcoords[i]][ycoords[i]]){
-          nAliveNeighbors++;
-        } else {
-          nDeadNeighbors++;
+      int nDeadNeighbours = 0;
+      int nAliveNeighbours = 0;
+
+      for(Set<PointLL>::iterator n=neighbours.begin();
+          n!=neighbours.end(); n++)
+        {
+          // if world contains a neighbour, it is alive
+          if (world.contains(*n))
+            {
+              nAliveNeighbours++;
+              //cout << (*n) << "is a living neighbour of " << *it << endl;
+            }
+          else
+            {
+              nDeadNeighbours++;
+              //cout << (*n) << "is a dead neighbour of " << *it << endl;
+            }
+        } // for all neighbours
+
+      if (nAliveNeighbours == 3)
+        {
+          nextworld.add(*it);
         }
-      }
-
-      // set the next state
-      if (nAliveNeighbors < 2) {
-        nextworld[i][j] = 0;
-      } else if (nAliveNeighbors == 2) {
-        nextworld[i][j] = world[i][j];
-      } else if (nAliveNeighbors == 3 ) {
-        nextworld[i][j] = 1;
-      } else {
-        nextworld[i][j] = 0;
-      }
-
     }
-  }
-
-  // update the entire world
-  world = nextworld;
-
+  return;
 }
 
-void getNeighbours(int i, int j, Vector<int> &xcoord, Vector<int> &ycoord, Grid<int> &world){
-  if (i-1 >= 0){
-    xcoord.add(i-1); ycoord.add(j);
-    if (j-1 >= 0) {
-      xcoord.add(i-1); ycoord.add(j-1);
+void updateWorld(Set<PointLL> &world) {
+  Set<PointLL> nextworld;
+  Set<PointLL> deadNeighbours;
+
+  for(Set<PointLL>::iterator it=world.begin(); it!=world.end(); it++) {
+    Set<PointLL> neighbours;
+    getNeighbours(*it, neighbours);
+
+    //count the neighbours
+    int nDeadNeighbours = 0;
+    int nAliveNeighbours = 0;
+
+    for(Set<PointLL>::iterator n=neighbours.begin();
+        n!=neighbours.end(); n++)
+      {
+        // if world contains a neighbour, it is alive
+        if (world.contains(*n))
+          {
+            nAliveNeighbours++;
+            //cout << (*n) << "is a living neighbour of " << (*it) << endl;
+          }
+        else
+          {
+            nDeadNeighbours++;
+            deadNeighbours.add(*n);
+            //cout << (*n) << "is a dead neighbour of " << (*it) << endl;
+          }
+      } // for all neighbours
+
+    // process living cells
+    // only stay alive if 3 living neighbours
+    if (nAliveNeighbours == 2 || nAliveNeighbours == 3)
+      {
+        nextworld.add(*it);
+      }
+  } // for all living cells
+  //cout <<"dead q contains:" << deadNeighbours.toString() << endl;
+
+
+  updateDeadCells(deadNeighbours, world, nextworld);
+
+// update the entire world
+
+world = nextworld;
+//cout << "nextworld has: " << nextworld;
+//cout <<"world has: " << world;
+}
+
+//TODO: change vector to set
+
+void getNeighbours(PointLL pt, Set<PointLL> &s)
+{
+  if (pt.getX() > LLONG_MIN)
+  {
+    s.add(PointLL(pt.getX()-1, pt.getY()));
+
+    if (pt.getY() > LLONG_MIN)
+    {
+      s.add(PointLL(pt.getX()-1, pt.getY()-1));
     }
-    if (j+1 < world.nCols){
-      xcoord.add(i-1); ycoord.add(j+1);
+
+    if (pt.getY() < LLONG_MAX){
+      s.add(PointLL(pt.getX()-1, pt.getY()+1));
     }
   }
 
-  if (i+1 < world.nRows) {
-    xcoord.add(i+1); ycoord.add(j);
-    if (j-1 >= 0) {
-      xcoord.add(i+1); ycoord.add(j-1);
+  if (pt.getX() < LLONG_MAX) {
+    s.add(PointLL(pt.getX()+1, pt.getY()));
+    if (pt.getY() > LLONG_MIN) {
+      s.add(PointLL(pt.getX()+1, pt.getY()-1));
     }
-    if (j+1 < world.nCols) {
-      xcoord.add(i+1); ycoord.add(j+1);
+    if (pt.getY() < LLONG_MAX) {
+      s.add(PointLL(pt.getX()+1, pt.getY()+1));
     }
   }
 
-  if (j-1 >= 0) {
-    xcoord.add(i); ycoord.add(j-1);
+  if (pt.getY() > LLONG_MIN) {
+    s.add(PointLL(pt.getX(), pt.getY()-1));
   }
-  if (j+1 < world.nCols) {
-    xcoord.add(i); ycoord.add(j+1);
+  if (pt.getY() < LLONG_MAX) {
+    s.add(PointLL(pt.getX(), pt.getY()+1));
   }
 
   return;
 
-}
-
-void displayWorld(Grid<int> &world){
-  cout << endl;
-  for (int i=0; i<world.nRows; i++){
-    for (int j=0; j<world.nCols; j++) {
-      if(world[i][j] < 1) {
-        cout << "-";
-      } else {
-        cout << "X";
-      }
-    }
-    cout << endl;
-  }
-}
-
-void testGUI(){
-    cout << "called testgui" << endl;
-    GWindow gw(1000,800);
-    const int CELLWIDTH = 50; // px
-    //const GRectangle rect = new GRectangle(100,500, CELLWIDTH, CELLWIDTH);
-
-    gw.fillRect(100,100, CELLWIDTH, CELLWIDTH);
 }

@@ -1,5 +1,6 @@
 #include "lifegui.h"
 
+
 LifeGUI::LifeGUI()
 {
   gw.setSize(defaultWidth, defaultHeight);
@@ -13,6 +14,7 @@ LifeGUI::~LifeGUI()
   //gw.close();
 }
 
+/*
 void LifeGUI::drawBoard(Grid<int> &world){
   gw.clear();
   for(int i=0; i<world.nRows; i++){
@@ -21,12 +23,36 @@ void LifeGUI::drawBoard(Grid<int> &world){
       }
   }
 }
+*/
 
-void LifeGUI::drawCell(int row, int col, bool alive){
-  GRectangle cell(originX + col * cellWidth,
-               originY + row * cellWidth,
+void LifeGUI::drawBoard(Set<PointLL> &world){
+  clearBoard(world);
+  currentWorld = world;
+  gw.setColor("BLACK");
+  for (Set<PointLL>::iterator it = world.begin(); it != world.end(); it++)
+    {
+      drawCell((*it).getX(), (*it).getY());
+    }
+  return;
+}
+
+void LifeGUI::clearBoard(Set<PointLL> &world){
+  gw.setColor("WHITE");
+  for (Set<PointLL>::iterator it = currentWorld.begin(); it != currentWorld.end(); it++)
+    {
+      // if not contained in next world, erase it
+      if (!world.contains(*it))
+        {
+          drawCell((*it).getX(), (*it).getY());
+        }
+
+    }
+  return;
+}
+
+void LifeGUI::drawCell(int x, int y){
+  GRectangle cell(originX + x * cellWidth,
+               originY + y * cellWidth,
                cellWidth, cellWidth);
-  if (alive){
-    gw.fillRect(cell);
-  }
+  gw.fillRect(cell);
 }
