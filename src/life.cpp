@@ -24,7 +24,7 @@ void updateDeadCells(Set<PointLL> deadQ, Set<PointLL> &world, Set<PointLL> &next
 void getNeighbours(PointLL pt, Set<PointLL> &s);
 
 int main() {
-  GameOfLife game("fishcoord.txt");
+  //GameOfLife game("fishcoord.txt");
 
   //Set<PointLL> world;
   //Set<PointLL> nextworld;
@@ -33,6 +33,8 @@ int main() {
 
 
   LifeGUI gui;
+  gui.run();
+  /*
   while (true) {
     string s = getLine("[a]nimate, [t]ick, [q]uit? ");
     int it = 0;
@@ -62,7 +64,8 @@ int main() {
       it++;
     }
   }
-
+  */
+  return 0;
 }
 
 void initializeWorld(Set<PointLL>& world, string filename){

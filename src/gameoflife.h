@@ -24,7 +24,6 @@ private:
   void initializeWorld(string filename);
   void updateCells(bool alive, Set<PointLL>&pts, Set<PointLL>&nextworld);
   void getNeighbours(PointLL pt, Set<PointLL> &s);
-
 };
 
 #endif // GAMEOFLIFE_H
