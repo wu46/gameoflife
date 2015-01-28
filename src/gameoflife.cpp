@@ -64,14 +64,12 @@ void GameOfLife::updateCells(bool alive, Set<PointLL>&pts, Set<PointLL> &nextwor
         // if world contains a neighbour, it is alive
         if (world.contains(*n)) {
             nAliveNeighbours++;
-            //cout << (*n) << "is a living neighbour of " << (*it) << endl;
           }
         else {
             nDeadNeighbours++;
             if (alive) {
               deadNeighbours.add(*n);
             }
-            //cout << (*n) << "is a dead neighbour of " << (*it) << endl;
           }
       } // for all neighbours
     // process living cells
@@ -102,23 +100,13 @@ void GameOfLife::tick() {
 }
 
 void GameOfLife::initializeWorld(string filename) {
-  cout << "called initialize world" << endl;
   ifstream infile;
   infile.open(filename.c_str());
-
-  cout << filename.c_str() << endl;
-
   string nextline;
 
-  // Input file has the form:
-  // (x1,y1)
-  // (x2,y2)
-  // ...
-  cout << "opening file: " << filename << endl;
-  if (infile.is_open()) {
-    cout << "file is OPEN!" << endl;
-  } else {
-    cout << "file is NOT open :(" << endl;
+  if (!infile.is_open()) {
+    cout << "File failed to open. Loading default world..." << endl;
+    infile.open("fish_coord.txt");
   }
 
   while (getline(infile,nextline)) {

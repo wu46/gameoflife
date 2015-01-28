@@ -1,10 +1,13 @@
 #include "lifegui.h"
 
+int main() {
+  LifeGUI gui;
+  gui.run();
+  return 0;
+}
 
 LifeGUI::LifeGUI()
 {
-  //gw = GWindow(defaultWidth, defaultHeight);
-  cout << "made gwindow of size" << gw.getCanvasSize() << endl;
   gw.requestFocus();
   originX = (int) gw.getWidth() * marginRatio;
   originY = (int) gw.getHeight() * marginRatio;
@@ -18,14 +21,16 @@ LifeGUI::LifeGUI()
   quitButton = new GButton("quit");
   animateTextField = new GTextField(5);
   animateTextField->setText("50");
+  startButton = new GButton("Start");
   centerButton = new GButton("center");
+  fnameTextField = new GTextField(15);
+  fnameTextField->setText("fishcoord.txt");
+  FILE = new GLabel("  File name:");
 
-  gw.addToRegion(tickButton, "SOUTH");
-  gw.addToRegion(animateButton, "SOUTH");
-  gw.addToRegion(animateTextField, "SOUTH");
   gw.addToRegion(quitButton, "SOUTH");
-  gw.addToRegion(centerButton, "EAST");
-
+  gw.addToRegion(FILE, "EAST");
+  gw.addToRegion(fnameTextField, "EAST");
+  gw.addToRegion(startButton, "EAST");
 }
 
 LifeGUI::~LifeGUI()
@@ -33,10 +38,36 @@ LifeGUI::~LifeGUI()
   gw.close();
 }
 
+void LifeGUI::init(){
+  while (true) {
+    GActionEvent e = waitForEvent(ACTION_EVENT);
+    if (e.getActionCommand().compare("Start")==0) {
+      game = GameOfLife(fnameTextField->getText());
+      world = game.getWorld();
+      drawBoard(world);
+
+      gw.addToRegion(tickButton, "SOUTH");
+      gw.addToRegion(animateButton, "SOUTH");
+      gw.addToRegion(animateTextField, "SOUTH");
+      gw.addToRegion(quitButton, "SOUTH");
+      gw.addToRegion(centerButton, "EAST");
+
+      startButton->setEnabled(false);
+
+      return;
+    }
+
+    if (e.getActionCommand().compare("quit") == 0){
+      gw.close();
+      return;
+    }
+  }
+}
+
 void LifeGUI::run(){
-  GameOfLife game("fishcoord.txt");
-  Set<PointLL> world;
-  cout << "initialized game of life" << endl;
+
+  init();
+
   while (true) {
     int it = 0;
     int nIterations;
@@ -55,6 +86,7 @@ void LifeGUI::run(){
       nIterations = 0;
     }
 
+
     while (it < nIterations){
       game.tick();
       world = game.getWorld();
@@ -68,7 +100,7 @@ void LifeGUI::run(){
 
 void LifeGUI::drawBoard(Set<PointLL> &world){
   refreshBoard(world);
-  currentWorld = world;
+  lastWorld = world;
   gw.setColor("BLACK");
   for (Set<PointLL>::iterator it = world.begin(); it != world.end(); it++)
   {
@@ -81,14 +113,14 @@ void LifeGUI::clearBoard(Set<PointLL> &world){
   gw.setColor("WHITE");
   for (Set<PointLL>::iterator it = world.begin(); it != world.end(); it++)
   {
-      drawCell((*it).getX(), (*it).getY());
+    drawCell((*it).getX(), (*it).getY());
   }
   return;
 }
 
 void LifeGUI::refreshBoard(Set<PointLL> &world){
   gw.setColor("WHITE");
-  for (Set<PointLL>::iterator it = currentWorld.begin(); it != currentWorld.end(); it++)
+  for (Set<PointLL>::iterator it = lastWorld.begin(); it != lastWorld.end(); it++)
   {
     // if not contained in next world, erase it
     if (!world.contains(*it))
@@ -107,69 +139,23 @@ void LifeGUI::center(Set<PointLL> &world) {
   }
   // clear current board
   clearBoard(world);
-  /*
-  if (c == NULL){
-    PointLL * c = world.first();
-  }
-  */
+
   PointLL c = world.first();
 
   // draw new board
 
-  cout << "the point chosen as center is: " << c.toString() << endl;
-  cout << "origin at " << originX << "," << originY << endl;
-  cout << "width: " << gw.getWidth() << "height: " << gw.getHeight() << endl;
   int xloc = originX + c.getX()*cellWidth + cellOffsetX;
   int yloc = originY + c.getY()*cellWidth + cellOffsetY;
-  cout << "old xloc: " << xloc << " yloc: " << yloc << endl;
-  //originX = gw.getWidth()/2 - c.getX();
-  //originY = gw.getHeight()/2 - c.getY();
+
   cellOffsetX = gw.getWidth()/2.0 - originX - c.getX()*cellWidth;
   cellOffsetY = gw.getHeight()/2.0 - originY - c.getY()*cellWidth;
 
-  cout << "cellOffsetx=" << cellOffsetX << " celloffsety="
-       << cellOffsetY << endl;
 
   xloc = originX + c.getX()*cellWidth + cellOffsetX;
   yloc = originY + c.getY()*cellWidth + cellOffsetY;
-  cout << "new xloc: " << xloc << " yloc: " << yloc << endl;
-
-
 
   drawBoard(world);
 }
-
-/*
-void LifeGUI::center(Set<PointLL> &world) {
-  // calculate a centroid
-  // simple k-means
-  Vector<Centroid> centroids;
-  Vector<Set<PointLL>> centroidChildren;
-
-
-  //add the first centroid
-  centroids.add(*world.begin());
-
-  // if everyone is within reasonable distance, everyone can be assigned to it
-  // not reasonable: delta x or delta y more than half max width or max height
-  int xDistanceCutoff = gw.getWidth()/2;
-  int yDistanceCutoff = gw.getHeight()/2;
-
-  for (Set<PointLL>::iterator it=world.begin();
-      it!=world.end();
-      it++) {
-    for (int i=0; i<centroids.size(); i++){
-      if (abs((*it).getX() - (*centroidIt).getX()) > xDistanceCutoff ||
-          abs((*it).getY() - (*centroidIt).getY()) > yDistanceCutoff) {
-        centroidIt++;
-      } else {
-        // TODO:!!!! finish this
-      }
-    }
-
-  }
-}
-*/
 
 void LifeGUI::drawCell(int x, int y){
   // if cell is out of bounds, then don't draw it
@@ -183,7 +169,5 @@ void LifeGUI::drawCell(int x, int y){
     GRectangle cell(xloc, yloc, cellWidth, cellWidth);
     gw.fillRect(cell);
   }
-
-
 
 }

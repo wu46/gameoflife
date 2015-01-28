@@ -20,7 +20,8 @@ public:
 
 private:
     GWindow gw = GWindow(defaultWidth, defaultHeight);
-    Set<PointLL> currentWorld;
+    Set<PointLL> lastWorld;
+    Set<PointLL> world;
 
     const static int PAUSE_TIME = 50;
     const static int defaultWidth = 1000;
@@ -32,19 +33,28 @@ private:
     int originY;
     int cellOffsetX; // coord offset
     int cellOffsetY;
-    //PointLL c = PointLL(0,0);
-    void drawCell(int x, int y);
-    void refreshBoard(Set<PointLL> &world);
-    void clearBoard(Set<PointLL> &world);
-    void center(Set<PointLL> &world);
+
+
 
     // GUI components
     GButton *tickButton;
     GButton *animateButton;
     GButton *quitButton;
-    GButton *centerButton;
+    GButton *startButton;
     GButton *pauseButton;
+    GButton *centerButton;
     GTextField *animateTextField;
+    GTextField *fnameTextField;
+    GLabel *FILE;
+
+    GameOfLife game;
+
+    // private functions
+    void init();
+    void drawCell(int x, int y);
+    void refreshBoard(Set<PointLL> &world);
+    void clearBoard(Set<PointLL> &world);
+    void center(Set<PointLL> &world);
 };
 
 #endif // LIFEGUI_H
